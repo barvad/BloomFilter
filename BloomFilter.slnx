@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="BloomFilter.LoadTests/BloomFilter.LoadTests.csproj" />
+  <Project Path="BloomFilter.Tests/BloomFilter.Tests.csproj" />
+  <Project Path="BloomFilter/BloomFilter.csproj" />
+</Solution>
