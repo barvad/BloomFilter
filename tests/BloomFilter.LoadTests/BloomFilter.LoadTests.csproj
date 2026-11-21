@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\BloomFilter\BloomFilter.csproj" />
+    <ProjectReference Include="..\..\src\BloomFilter\BloomFilter.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

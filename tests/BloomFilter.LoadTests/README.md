@@ -7,9 +7,9 @@
 ## Запуск
 
 ```powershell
-dotnet run -c Release --project BloomFilter.LoadTests
-dotnet run -c Release --project BloomFilter.LoadTests -- all --profile standard
-dotnet run -c Release --project BloomFilter.LoadTests -- rotation --profile long --threads 16
+dotnet run -c Release --project tests/BloomFilter.LoadTests
+dotnet run -c Release --project tests/BloomFilter.LoadTests -- all --profile standard
+dotnet run -c Release --project tests/BloomFilter.LoadTests -- rotation --profile long --threads 16
 ```
 
 Код выхода: `0` - все проверки пройдены, `1` - нарушен инвариант (или не достигнута
