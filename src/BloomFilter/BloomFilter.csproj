@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <PackageId>BloomFilter</PackageId>
+    <PackageId>barvad.RotatingBloomFilter</PackageId>
     <Version>1.0.0</Version>
     <Authors>barvad</Authors>
     <Company>barvad</Company>
