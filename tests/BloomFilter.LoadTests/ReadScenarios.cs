@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace BloomFilter.LoadTests;
 
@@ -7,14 +7,14 @@ internal static class ReadScenarios
     private const int BatchSize = 4096;
 
     /// <summary>
-    /// Параллельное чтение кольца, заполненного до порога ротации.
+    /// Parallel reading of the ring filled to the rotation threshold.
     /// </summary>
     public static ScenarioReport RunRead(ProfileSettings settings)
     {
         long total = settings.ReadItems;
         int threads = settings.Threads;
         BloomFilterRing ring = BloomFilterRingFactory.Create(3, total + 1, 0.001, fillPercent: 1.0);
-        var report = new ScenarioReport($"Параллельное чтение: {Fmt.N(total)} ключей, {threads} потоков");
+        var report = new ScenarioReport($"Parallel reading: {Fmt.N(total)} keys, {threads} threads");
 
         long perThread = total / threads;
 
@@ -81,33 +81,33 @@ internal static class ReadScenarios
         long missingTotal = ParallelRunner.SumFailures(results);
         double readRate = readsTotal / readWatch.Elapsed.TotalSeconds;
 
-        report.Row("Заполнение", $"{Fmt.Rate(total / fillWatch.Elapsed.TotalSeconds)}, {Fmt.Duration(fillWatch.Elapsed)}");
-        report.Row("Прочитано", Fmt.N(readsTotal));
-        report.Row("Пропускная способность чтения", Fmt.Rate(readRate));
-        report.Row("Задержка чтения", ParallelRunner.MergeLatency(results).Summary());
-        report.Row("Ложных отрицаний", Fmt.N(missingTotal));
-        report.Row("Ротаций", Fmt.N(ring.RotationCount));
+        report.Row("Filling", $"{Fmt.Rate(total / fillWatch.Elapsed.TotalSeconds)}, {Fmt.Duration(fillWatch.Elapsed)}");
+        report.Row("Read", Fmt.N(readsTotal));
+        report.Row("Reading throughput", Fmt.Rate(readRate));
+        report.Row("Reading latency", ParallelRunner.MergeLatency(results).Summary());
+        report.Row("False negatives", Fmt.N(missingTotal));
+        report.Row("Rotations", Fmt.N(ring.RotationCount));
 
-        report.Check("Ротации не ожидались", ring.RotationCount == 0, $"получено {ring.RotationCount}");
-        report.Check("Нет ложных отрицаний при чтении", missingTotal == 0, $"пропущено {missingTotal}");
+        report.Check("Unexpected rotations", ring.RotationCount == 0, $"received {ring.RotationCount}");
+        report.Check("No false negatives on read", missingTotal == 0, $"skipped {missingTotal}");
         report.Check(
-            "Заполнено не менее 99% ключей",
+            "At least 99% of keys are filled",
             ring.TotalUniqueCount >= (long)(total * 0.99),
-            $"учтено {ring.TotalUniqueCount}");
+            $"considered {ring.TotalUniqueCount}");
 
         report.Throughput = readRate;
         return report;
     }
 
     /// <summary>
-    /// Прокрутка кольца под нагрузкой с проверкой окна памяти.
-    /// Последние поколения должны читаться, а поколения, чьи фильтры переиспользованы, - нет.
+    /// Scrolling the ring under load with memory window verification.
+    /// Last generations should be readable, and generations whose filters are reused should not.
     /// </summary>
     /// <remarks>
-    /// Кольцо намеренно маленькое, поэтому изредка возможны ложные срабатывания
-    /// (особенно при очень низком FPR и малом размере битовой карты). Они не ломают
-    /// инварианты: счётчики считаются по фактически принятым значениям, а граница
-    /// окна проверяется с запасом в одно поколение.
+    /// The ring is deliberately small, so false positives may occasionally occur
+    /// (especially with very low FPR and small bitmap size). They do not break
+    /// invariants: counters are calculated based on actually accepted values, and the window border
+    /// is checked with a margin of one generation.
     /// </remarks>
     public static ScenarioReport RunRotation(ProfileSettings settings)
     {
@@ -128,7 +128,7 @@ internal static class ReadScenarios
         long totalOps = generations * threshold;
 
         var report = new ScenarioReport(
-            $"Ротация под нагрузкой: {Fmt.N(generations)} поколений по {Fmt.N(threshold)} значений");
+            $"Rotation under load: {Fmt.N(generations)} generations of {Fmt.N(threshold)} values");
 
         var samples = new string[sampleSlots][];
         var latency = new LatencySamples();
@@ -165,7 +165,7 @@ internal static class ReadScenarios
             totalAddTicks += generationTicks;
             latency.Add(BatchTimer.TicksToMicrosecondsValue * generationTicks / threshold);
 
-            // Ротация происходит ровно на каждом пороге принятых значений.
+            // Rotation occurs exactly at each threshold of accepted values.
             long expectedRotations = accepted / threshold;
 
             if (ring.RotationCount != expectedRotations || ring.TotalUniqueCount != accepted)
@@ -178,7 +178,7 @@ internal static class ReadScenarios
                 rotationFailures++;
             }
 
-            // Текущее и предыдущее поколения должны находиться в кольце.
+            // The current and previous generations must be in the ring.
             if (!AllPresent(ring, samples[slot], expected: true))
             {
                 windowFailures++;
@@ -189,14 +189,14 @@ internal static class ReadScenarios
                 windowFailures++;
             }
 
-            // Поколение g-2 переиспользуется на этой ротации: допускаем редкие ложные
-            // срабатывания после очистки, но не более 5% выборки.
+            // Generation g-2 is reused in this rotation: rare false positives are allowed
+            // after cleaning, but no more than 5% of the sample.
             if (generation >= 3 && PresentCount(ring, samples[(generation - 3) % sampleSlots]) > sampleSize / 20)
             {
                 windowFailures++;
             }
 
-            // Поколение g-3 покинуло окно гарантированно, даже если граница сдвинулась.
+            // Generation g-3 has left the window guaranteed, even if the boundary has shifted.
             if (generation >= 4 && !AllPresent(ring, samples[(generation - 4) % sampleSlots], expected: false))
             {
                 windowFailures++;
@@ -206,28 +206,28 @@ internal static class ReadScenarios
         double totalAddSeconds = totalAddTicks / (double)Stopwatch.Frequency;
         double rate = totalOps / totalAddSeconds;
 
-        report.Row("Операций добавления", Fmt.N(totalOps));
-        report.Row("Принято уникальных", Fmt.N(accepted));
-        report.Row("Отклонено ложными срабатываниями", Fmt.N(rejected));
-        report.Row("Время добавления", Fmt.Duration(TimeSpan.FromSeconds(totalAddSeconds)));
-        report.Row("Пропускная способность", Fmt.Rate(rate));
-        report.Row("Задержка добавления", latency.Summary());
-        report.Row("Ротаций", Fmt.N(ring.RotationCount));
-        report.Row("Активный индекс", ring.ActiveIndex.ToString());
-        report.Row("Учтено уникальных", Fmt.N(ring.TotalUniqueCount));
+        report.Row("Addition operations", Fmt.N(totalOps));
+        report.Row("Accepted uniques", Fmt.N(accepted));
+        report.Row("Rejected by false positives", Fmt.N(rejected));
+        report.Row("Addition time", Fmt.Duration(TimeSpan.FromSeconds(totalAddSeconds)));
+        report.Row("Throughput", Fmt.Rate(rate));
+        report.Row("Addition latency", latency.Summary());
+        report.Row("Rotations", Fmt.N(ring.RotationCount));
+        report.Row("Active index", ring.ActiveIndex.ToString());
+        report.Row("Recorded uniques", Fmt.N(ring.TotalUniqueCount));
 
         report.Check(
-            "Доля отказов не выше 0,1%",
+            "Rejection rate no more than 0.1%",
             rejected <= totalOps / 1_000,
-            $"отклонено {rejected} из {totalOps}");
+            $"rejected {rejected} of {totalOps}");
         report.Check(
-            "Счётчики ротаций и уникальных совпадают с принятыми значениями",
+            "Rotation and unique counters match accepted values",
             rotationFailures == 0,
-            $"расхождений {rotationFailures}");
+            $"discrepancies {rotationFailures}");
         report.Check(
-            "Окно памяти соответствует кольцу из трёх фильтров",
+            "Memory window matches the three-filter ring",
             windowFailures == 0,
-            $"нарушений {windowFailures}");
+            $"violations {windowFailures}");
 
         report.Throughput = rate;
         return report;

@@ -1,4 +1,4 @@
-namespace BloomFilter.Tests;
+﻿namespace BloomFilter.Tests;
 
 public sealed class BloomFilterRingFactoryTests
 {
@@ -91,9 +91,9 @@ public sealed class BloomFilterRingFactoryTests
     [Theory]
     [InlineData(1_000L, 0.9, 900L)]
     [InlineData(1_000L, 0.5, 500L)]
-    [InlineData(7L, 0.5, 4L)]      // округление вверх: 3.5 -> 4
+    [InlineData(7L, 0.5, 4L)]      // rounding up: 3.5 -> 4
     [InlineData(10L, 0.01, 1L)]
-    [InlineData(1L, 0.001, 1L)]    // порог не может быть нулевым
+    [InlineData(1L, 0.001, 1L)]    // threshold cannot be zero
     public void RotationThresholdIsCeilingOfExpectedItemsTimesFillPercent(
         long expectedItems,
         double fillPercent,

@@ -1,10 +1,10 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace BloomFilter.LoadTests;
 
 /// <summary>
-/// Формирует ключи в заранее выделенный буфер без выделений в куче,
-/// чтобы замеры отражали стоимость самого фильтра, а не генерации строк.
+/// Forms keys in a pre-allocated buffer without heap allocations,
+/// so that the measurements reflect the cost of the filter itself, rather than the cost of string generation.
 /// </summary>
 internal static class KeyWriter
 {
@@ -15,7 +15,7 @@ internal static class KeyWriter
 
         if (!value.TryFormat(destination[position..], out int written))
         {
-            throw new InvalidOperationException("Буфер ключа слишком мал.");
+            throw new InvalidOperationException("The key buffer is too small.");
         }
 
         return position + written;
@@ -25,8 +25,8 @@ internal static class KeyWriter
 internal readonly record struct WorkerResult(long Operations, long Failures, TimeSpan Elapsed, LatencySamples Latency);
 
 /// <summary>
-/// Запускает фиксированное число выделенных потоков с общим стартовым барьером,
-/// чтобы измерение не искажалось разогревом пула потоков.
+/// Starts a fixed number of dedicated threads with a shared startup barrier,
+/// so that the measurement is not distorted by the warm-up of the thread pool.
 /// </summary>
 internal static class ParallelRunner
 {
@@ -78,7 +78,7 @@ internal static class ParallelRunner
         Exception? firstError = errors.FirstOrDefault(e => e is not null);
         if (firstError is not null)
         {
-            throw new InvalidOperationException("Поток нагрузки завершился с ошибкой.", firstError);
+            throw new InvalidOperationException("The worker thread has terminated with an error.", firstError);
         }
 
         return results;

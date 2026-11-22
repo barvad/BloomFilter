@@ -1,10 +1,10 @@
-# Нагрузочные тесты BloomFilter
+﻿# BloomFilter Load Tests
 
-Отдельный консольный проект: обычный `dotnet test` его не запускает, только собирает.
-Тесты проверяют не только скорость, но и инварианты: отсутствие потерь и ложных
-отрицаний, точность счётчиков ротации, окно памяти и аллокации.
+A separate console project: regular `dotnet test` does not run it, only builds.
+The tests check not only the speed but also the invariants: no loss and false
+negatives, accuracy of rotation counters, memory window, and allocations.
 
-## Запуск
+## Running
 
 ```powershell
 dotnet run -c Release --project tests/BloomFilter.LoadTests
@@ -12,40 +12,40 @@ dotnet run -c Release --project tests/BloomFilter.LoadTests -- all --profile sta
 dotnet run -c Release --project tests/BloomFilter.LoadTests -- rotation --profile long --threads 16
 ```
 
-Код выхода: `0` - все проверки пройдены, `1` - нарушен инвариант (или не достигнута
-`--min-ops`), `2` - ошибка аргументов.
+Exit code: `0` - all checks passed, `1` - invariant violated (or `--min-ops` not reached),
+`2` - argument error.
 
-## Сценарии
+## Scenarios
 
-| Сценарий | Что проверяет |
+| Scenario | What it checks |
 |---|---|
-| `write` | Однопоточная запись в `ConcurrentBloomFilter` и в кольцо без ротации: пропускная способность, задержки, нулевые аллокации, отсутствие ложных отрицаний |
-| `parallel-write` | Параллельная запись в кольцо без ротации: точный счётчик уникальных, отсутствие потерь, отсутствие ложных отрицаний |
-| `read` | Параллельное чтение заранее заполненного кольца: пропускная способность и ноль ложных отрицаний |
-| `rotation` | Прокрутка кольца на миллионы вставок: счётчики ротаций, активный индекс, окно памяти на 3 фильтра |
-| `fpr` | Фактическая доля ложных срабатываний на заполненном до ёмкости фильтре и кольце |
-| `memory` | Объём кольца против теоретического и аллокации на операцию |
+| `write` | Single-threaded write to `ConcurrentBloomFilter` and to the ring without rotation: throughput, latency, zero allocations, no false negatives |
+| `parallel-write` | Parallel write to the ring without rotation: exact unique counter, no loss, no false negatives |
+| `read` | Parallel read of a pre-filled ring: throughput and zero false negatives |
+| `rotation` | Ring rotation on millions of inserts: rotation counters, active index, memory window for 3 filters |
+| `fpr` | Actual false positive rate on a filter and ring filled to capacity |
+| `memory` | Ring size vs theoretical size and allocations per operation |
 
-## Параметры
+## Parameters
 
-- `--profile quick|standard|long` - объём и длительность (по умолчанию `quick`, около 3 c);
-  `standard` - около 10 c, `long` - минуты и до нескольких сотен МБ памяти.
-- `--threads N` - число потоков (по умолчанию зависит от профиля).
-- `--min-ops N` - нижняя граница пропускной способности для сценариев, где она измеряется.
+- `--profile quick|standard|long` - volume and duration (default `quick`, about 3 seconds);
+  `standard` - about 10 seconds, `long` - minutes and up to several hundred MB of memory.
+- `--threads N` - number of threads (default depends on the profile).
+- `--min-ops N` - lower bound of throughput for scenarios where it is measured.
 - `--list`, `--help`.
 
-## Двойное хеширование и малые фильтры
+## Double Hashing and Small Filters
 
-Шаг двойного хеширования делается нечётным: `(h1 + i * (h2 | 1)) % bitCount`.
-Размер битовой карты всегда кратен 64, поэтому нечётный шаг гарантирует орбиту
-длиной не меньше 64 позиций, и `k` проверок ключа не могут схлопнуться в пару
-позиций даже на маленьких фильтрах.
+The double hashing step is made odd: `(h1 + i * (h2 | 1)) % bitCount`.
+The size of the bit array is always a multiple of 64, so the odd step guarantees an orbit
+of at least 64 positions, and `k` key checks cannot collapse into a pair
+of positions even on small filters.
 
-До этого исправления на ёмкости 1000 при целевой доле `1e-9` наблюдались
-единичные ложные срабатывания на миллионы проверок (`h2` часто имел большой общий
-делитель с `bitCount`). На больших фильтрах эффект был пренебрежим, но теперь
-поведение стабильно на всех размерах.
+Before this fix, at a capacity of 1000 with a target ratio of `1e-9`, single
+false positives were observed on millions of checks (`h2` often had a large common
+divisor with `bitCount`). On larger filters, the effect was negligible, but now
+the behavior is stable across all sizes.
 
-Смена формулы позиций несовместима с фильтрами, сохранёнными старым кодом через
-`SaveTo`: в формате нет версии схемы хеширования. На момент исправления таких
-файлов не существовало.
+Changing the position formula is incompatible with filters saved by the old code via
+`SaveTo`: the hash scheme version is not available in the format. At the time of the fix, such
+files did not exist.

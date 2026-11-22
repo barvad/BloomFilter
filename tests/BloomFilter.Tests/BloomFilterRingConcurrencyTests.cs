@@ -1,4 +1,4 @@
-namespace BloomFilter.Tests;
+﻿namespace BloomFilter.Tests;
 
 public sealed class BloomFilterRingConcurrencyTests
 {
@@ -23,7 +23,7 @@ public sealed class BloomFilterRingConcurrencyTests
         const int threads = 8;
         const int perThread = 1_000;
 
-        // Порог ротации 90 000 - заведомо выше 8 000 записей, поэтому окно не проворачивается.
+        // Rotation threshold 90,000 - knowingly higher than 8,000 records, so the window does not roll over.
         BloomFilterRing ring = CreateRing(expectedItems: 100_000, fillPercent: 0.9);
 
         Parallel.For(0, threads, thread =>
@@ -42,7 +42,7 @@ public sealed class BloomFilterRingConcurrencyTests
             {
                 Assert.True(
                     ring.MightContain($"item-{thread}-{i}"),
-                    $"Потеряно значение item-{thread}-{i}.");
+                    $"Lost value item-{thread}-{i}.");
             }
         }
     }
@@ -54,7 +54,7 @@ public sealed class BloomFilterRingConcurrencyTests
         const int perThread = 100;
         const int total = threads * perThread;
 
-        // Порог 100, всего записей 800: кольцо обязано провернуться несколько раз под нагрузкой.
+        // Threshold 100, total records 800: the ring must rotate several times under load.
         BloomFilterRing ring = CreateRing(expectedItems: 200, fillPercent: 0.5);
 
         Parallel.For(0, threads, thread =>
@@ -65,13 +65,13 @@ public sealed class BloomFilterRingConcurrencyTests
             }
         });
 
-        // Каждое уникальное значение учитывается ровно один раз, несмотря на гонки.
+        // Each unique value is counted exactly once, despite races.
         Assert.Equal((long)total, ring.TotalUniqueCount);
 
-        // Ротацию запускает ровно один поток на снимок, поэтому их не больше, чем total / threshold.
+        // Rotation is triggered by exactly one snapshot thread, so there are no more of them than total / threshold.
         Assert.InRange(ring.RotationCount, 1, total / 100);
 
-        // Активный индекс всегда указывает на существующий фильтр.
+        // The active index always points to an existing filter.
         Assert.InRange(ring.ActiveIndex, 0, ring.FilterCount - 1);
     }
 
@@ -84,8 +84,8 @@ public sealed class BloomFilterRingConcurrencyTests
         var reported = new bool[writers];
         Parallel.For(0, writers, i => reported[i] = ring.TryAdd("shared"));
 
-        // Проверка и вставка в кольце не атомарны, поэтому "новым" значение
-        // может оказаться более одного раза; важно, что оно вообще учтено и видно.
+        // Check and insert in the ring are not atomic, so the value
+        // may turn out to be "new" more than once; it is important that it is accounted for and visible at all.
         Assert.Contains(true, reported);
         Assert.True(ring.TotalUniqueCount >= 1);
         Assert.True(ring.MightContain("shared"));
@@ -105,7 +105,7 @@ public sealed class BloomFilterRingConcurrencyTests
                 ring.Add($"value-{thread}-{i}");
             }
 
-            // Параллельные читатели не должны падать на снимках кольца.
+            // Parallel readers should not crash on ring snapshots.
             for (int i = 0; i < perThread; i++)
             {
                 ring.MightContain($"value-{thread}-{i}");

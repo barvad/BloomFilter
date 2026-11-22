@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace BloomFilter.LoadTests;
 
@@ -7,14 +7,14 @@ internal static class CapacityScenarios
     private const double TargetRate = 0.001;
 
     /// <summary>
-    /// Фактическая доля ложных срабатываний на фильтре, заполненном до расчётной ёмкости.
+    /// The actual false positive rate of the filter when filled to the calculated capacity.
     /// </summary>
     public static ScenarioReport RunFalsePositiveRate(ProfileSettings settings)
     {
         int items = settings.FprItems;
         int probes = settings.FprProbes;
         var report = new ScenarioReport(
-            $"Ложные срабатывания: {Fmt.N(items)} значений, {Fmt.N(probes)} проверок отсутствующих ключей");
+            $"False positives: {Fmt.N(items)} items, {Fmt.N(probes)} checks of absent keys");
 
         Span<char> buffer = stackalloc char[32];
 
@@ -31,7 +31,7 @@ internal static class CapacityScenarios
         long filterFalsePositives = CountFalsePositives(filter, probes);
         double filterRate = filterFalsePositives / (double)probes;
 
-        // То же для кольца: заполняем на одно значение меньше порога, чтобы не проворачиваться.
+        // The same for the ring: fill with one item less than the threshold to avoid rotating.
         BloomFilterRing ring = BloomFilterRingFactory.Create(3, items, TargetRate, fillPercent: 1.0);
         for (int i = 0; i < items - 1; i++)
         {
@@ -42,27 +42,27 @@ internal static class CapacityScenarios
         long ringFalsePositives = CountFalsePositives(ring, probes);
         double ringRate = ringFalsePositives / (double)probes;
 
-        report.Row("Ёмкость фильтра", Fmt.N(items));
-        report.Row("Размер базового фильтра", Fmt.Bytes(filter.SizeInBytes));
-        report.Row("Целевая доля ложных срабатываний", $"{TargetRate:P3}");
-        report.Row("Фактически, базовый фильтр", $"{filterRate:P4} ({Fmt.N(filterFalsePositives)})");
-        report.Row("Фактически, кольцо", $"{ringRate:P4} ({Fmt.N(ringFalsePositives)})");
-        report.Row("Время заполнения", Fmt.Duration(fillWatch.Elapsed));
+        report.Row("Filter capacity", Fmt.N(items));
+        report.Row("Base filter size", Fmt.Bytes(filter.SizeInBytes));
+        report.Row("Target false positive rate", $"{TargetRate:P3}");
+        report.Row("Actual, base filter", $"{filterRate:P4} ({Fmt.N(filterFalsePositives)})");
+        report.Row("Actual, ring", $"{ringRate:P4} ({Fmt.N(ringFalsePositives)})");
+        report.Row("Fill time", Fmt.Duration(fillWatch.Elapsed));
 
         double limit = TargetRate * 2.5 + 0.0005;
-        report.Check("Доля ложных срабатываний базового фильтра в допуске", filterRate <= limit, $"{filterRate:P4} > {limit:P4}");
-        report.Check("Доля ложных срабатываний кольца в допуске", ringRate <= limit, $"{ringRate:P4} > {limit:P4}");
-        report.Check("Кольцо не провернулось", ring.RotationCount == 0, $"ротаций {ring.RotationCount}");
+        report.Check("Base filter false positive rate within tolerance", filterRate <= limit, $"{filterRate:P4} > {limit:P4}");
+        report.Check("Ring false positive rate within tolerance", ringRate <= limit, $"{ringRate:P4} > {limit:P4}");
+        report.Check("Ring did not rotate", ring.RotationCount == 0, $"rotations {ring.RotationCount}");
         return report;
     }
 
     /// <summary>
-    /// Объём памяти кольца и отсутствие аллокаций на операцию.
+    /// Memory usage of the ring and absence of allocations during operations.
     /// </summary>
     public static ScenarioReport RunMemory(ProfileSettings settings)
     {
         long expected = settings.WriteItems;
-        var report = new ScenarioReport($"Память: кольцо на {Fmt.N(expected)} значений на фильтр");
+        var report = new ScenarioReport($"Memory: ring for {Fmt.N(expected)} items in filter");
 
         long before = GC.GetTotalMemory(forceFullCollection: true);
         BloomFilterRing ring = BloomFilterRingFactory.Create(3, expected, 0.001, fillPercent: 1.0);
@@ -73,16 +73,16 @@ internal static class CapacityScenarios
         long perFilterBytes = (long)Math.Ceiling(bitsPerFilter / 64.0) * sizeof(ulong);
         long theoretical = perFilterBytes * ring.FilterCount;
 
-        report.Row("Управляемая куча до", Fmt.Bytes(before));
-        report.Row("Управляемая куча после", Fmt.Bytes(after));
-        report.Row("Измеренный размер кольца", Fmt.Bytes(measured));
-        report.Row("Теоретический размер кольца", Fmt.Bytes(theoretical));
-        report.Row("Байт на значение", $"{(measured / (double)(expected * ring.FilterCount)):N2}");
+        report.Row("Managed heap before", Fmt.Bytes(before));
+        report.Row("Managed heap after", Fmt.Bytes(after));
+        report.Row("Measured ring size", Fmt.Bytes(measured));
+        report.Row("Theoretical ring size", Fmt.Bytes(theoretical));
+        report.Row("Bytes per item", $"{(measured / (double)(expected * ring.FilterCount)):N2}");
 
         report.Check(
-            "Измеренный размер близок к теоретическому",
+            "Measured size close to theoretical",
             measured >= theoretical / 2 && measured <= theoretical * 2 + 32L * 1024 * 1024,
-            $"измерено {measured} Б, ожидалось около {theoretical} Б");
+            $"measured {measured} B, expected around {theoretical} B");
 
         long operations = Math.Min(settings.ParallelItems, 2_000_000);
         long capacity = Math.Max(expected, operations);
@@ -116,17 +116,17 @@ internal static class CapacityScenarios
         watch.Stop();
         long allocated = GC.GetAllocatedBytesForCurrentThread() - allocBefore;
 
-        report.Row("Операций записи и чтения", Fmt.N(operations * 2));
-        report.Row("Время операций", Fmt.Duration(watch.Elapsed));
-        report.Row("Аллокации кучи на операциях", $"{Fmt.N(allocated)} Б ({allocated / (double)(operations * 2):N4} Б/оп)");
+        report.Row("Read and write operations", Fmt.N(operations * 2));
+        report.Row("Operations time", Fmt.Duration(watch.Elapsed));
+        report.Row("Heap allocations during operations", $"{Fmt.N(allocated)} B ({allocated / (double)(operations * 2):N4} B/op)");
         report.Row(
-            "Сборок мусора (0/1/2)",
+            "Garbage collections (0/1/2)",
             $"{GC.CollectionCount(0) - gen0}/{GC.CollectionCount(1) - gen1}/{GC.CollectionCount(2) - gen2}");
 
         report.Check(
-            "Операции фильтра не выделяют память в куче",
+            "Filter operations do not allocate memory on the heap",
             allocated < 64 * 1024,
-            $"выделено {Fmt.N(allocated)} Б");
+            $"allocated {Fmt.N(allocated)} B");
         return report;
     }
 

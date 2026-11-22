@@ -1,21 +1,21 @@
 ﻿# BloomFilter
 
-Потокобезопасная библиотека фильтра Блума для .NET 10 с поддержкой кольцевой ротации фильтров.
+A thread-safe Bloom filter library for .NET 10 with support for filter ring rotation.
 
-## Структура
+## Structure
 
-- `src/BloomFilter` — библиотека `BloomFilter`.
-- `tests/BloomFilter.Tests` — модульные и многопоточные тесты.
-- `tests/BloomFilter.LoadTests` — консольные нагрузочные сценарии.
+- `src/BloomFilter` — the `BloomFilter` library.
+- `tests/BloomFilter.Tests` — unit and multithreaded tests.
+- `tests/BloomFilter.LoadTests` — console load test scenarios.
 
-## Сборка и тесты
+## Building and Testing
 
 ```powershell
 dotnet build BloomFilter.slnx --configuration Release
 dotnet test BloomFilter.slnx --configuration Release
 ```
 
-## Использование
+## Usage
 
 ```csharp
 using BloomFilter;
@@ -26,10 +26,10 @@ filter.Add("https://example.com");
 bool mightContain = filter.Contains("https://example.com");
 ```
 
-Для данных с ограниченным временным окном используйте `BloomFilterRing`, который автоматически ротирует внутренние фильтры.
+For data with a limited time window, use `BloomFilterRing`, which automatically rotates the internal filters.
 
-Подробное описание нагрузочных сценариев находится в [tests/BloomFilter.LoadTests/README.md](tests/BloomFilter.LoadTests/README.md).
+Detailed load test scenarios are described in [tests/BloomFilter.LoadTests/README.md](tests/BloomFilter.LoadTests/README.md).
 
-## Лицензия
+## License
 
-Проект распространяется по лицензии [MIT](LICENSE).
+This project is licensed under the [MIT](LICENSE) license.

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime;
 
 namespace BloomFilter.LoadTests;
@@ -9,13 +9,13 @@ internal static class LoadTestRunner
     {
         ProfileSettings settings = options.ProfileSettings;
 
-        Console.WriteLine("Нагрузочные тесты BloomFilter");
-        Console.WriteLine($"  Профиль      : {options.Profile.ToString().ToLowerInvariant()}");
-        Console.WriteLine($"  Потоки       : {settings.Threads}");
-        Console.WriteLine($"  Процессоров  : {Environment.ProcessorCount}");
+        Console.WriteLine("BloomFilter Load Tests");
+        Console.WriteLine($"  Profile      : {options.Profile.ToString().ToLowerInvariant()}");
+        Console.WriteLine($"  Threads       : {settings.Threads}");
+        Console.WriteLine($"  Processors  : {Environment.ProcessorCount}");
         Console.WriteLine($"  Runtime      : {Environment.Version}");
-        Console.WriteLine($"  Server GC    : {(GCSettings.IsServerGC ? "да" : "нет")}");
-        Console.WriteLine($"  Сценарии     : {string.Join(", ", LoadTestOptions.KnownScenarios.Where(options.ShouldRun))}");
+        Console.WriteLine($"  Server GC    : {(GCSettings.IsServerGC ? "yes" : "no")}");
+        Console.WriteLine($"  Scenarios     : {string.Join(", ", LoadTestOptions.KnownScenarios.Where(options.ShouldRun))}");
 
         var total = Stopwatch.StartNew();
         var reports = new List<ScenarioReport>();
@@ -35,7 +35,7 @@ internal static class LoadTestRunner
                 "rotation" => ReadScenarios.RunRotation(settings),
                 "fpr" => CapacityScenarios.RunFalsePositiveRate(settings),
                 "memory" => CapacityScenarios.RunMemory(settings),
-                _ => throw new InvalidOperationException($"Неизвестный сценарий: {scenario}"),
+                _ => throw new InvalidOperationException($"Unknown scenario: {scenario}"),
             };
 
             report.Print();
@@ -54,7 +54,7 @@ internal static class LoadTestRunner
                 {
                     throughputOk = false;
                     Console.WriteLine(
-                        $"  НЕДОСТАТОЧНАЯ ПРОПУСКНАЯ СПОСОБНОСТЬ: {report.Title} - " +
+                        $"  INSUFFICIENT THROUGHOUT: {report.Title} - " +
                         $"{Fmt.Rate(report.Throughput!.Value)} < {Fmt.Rate(options.MinOpsPerSecond)}");
                 }
             }
@@ -64,21 +64,21 @@ internal static class LoadTestRunner
 
         Console.WriteLine();
         Console.WriteLine(
-            $"Итог: {reports.Count - reports.Count(r => !r.Ok)} из {reports.Count} сценариев пройдено, " +
-            $"время {Fmt.Duration(total.Elapsed)}");
+            $"Result: {reports.Count - reports.Count(r => !r.Ok)} out of {reports.Count} scenarios passed, " +
+            $"time {Fmt.Duration(total.Elapsed)}");
 
         if (!throughputOk)
         {
-            Console.WriteLine($"Нижняя граница пропускной способности {Fmt.Rate(options.MinOpsPerSecond)} не достигнута.");
+            Console.WriteLine($"Lower throughput boundary {Fmt.Rate(options.MinOpsPerSecond)} not reached.");
         }
 
         if (failed || !throughputOk)
         {
-            Console.WriteLine("РЕЗУЛЬТАТ: ПРОВАЛ");
+            Console.WriteLine("RESULT: FAILED");
             return 1;
         }
 
-        Console.WriteLine("РЕЗУЛЬТАТ: OK");
+        Console.WriteLine("RESULT: OK");
         return 0;
     }
 }

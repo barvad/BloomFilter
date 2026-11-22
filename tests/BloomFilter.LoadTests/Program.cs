@@ -24,13 +24,13 @@ if (options.Help)
 
 if (options.ListScenarios)
 {
-    Console.WriteLine("Сценарии:");
-    Console.WriteLine("  write           однопоточная запись: базовый фильтр и кольцо без ротации");
-    Console.WriteLine("  parallel-write  параллельная запись без ротации, проверка отсутствия потерь");
-    Console.WriteLine("  read            параллельное чтение заполненного кольца");
-    Console.WriteLine("  rotation        прокрутка кольца с проверкой окна памяти и счётчиков");
-    Console.WriteLine("  fpr             фактическая доля ложных срабатываний на заполненном фильтре");
-    Console.WriteLine("  memory          объём кольца и аллокации на операцию");
+    Console.WriteLine("Scenarios:");
+    Console.WriteLine("  write           single-threaded write: basic filter and ring without rotation");
+    Console.WriteLine("  parallel-write  parallel write without rotation, check for no loss");
+    Console.WriteLine("  read            parallel read of the filled ring");
+    Console.WriteLine("  rotation        scroll the ring with memory window and counters check");
+    Console.WriteLine("  fpr             actual false positive rate on the filled filter");
+    Console.WriteLine("  memory          ring volume and allocations per operation");
     return 0;
 }
 

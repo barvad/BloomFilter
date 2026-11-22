@@ -1,4 +1,4 @@
-namespace BloomFilter.LoadTests;
+﻿namespace BloomFilter.LoadTests;
 
 internal enum LoadProfile
 {
@@ -116,7 +116,7 @@ internal sealed class LoadTestOptions
                 default:
                     if (arg.StartsWith("--", StringComparison.Ordinal))
                     {
-                        throw new ArgumentException($"Неизвестный параметр: {arg}");
+                        throw new ArgumentException($"Unknown parameter: {arg}");
                     }
 
                     foreach (string scenario in arg.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -127,7 +127,7 @@ internal sealed class LoadTestOptions
 
                         if (name != "all" && !KnownScenarios.Contains(name))
                         {
-                            throw new ArgumentException($"Неизвестный сценарий: {scenario}");
+                            throw new ArgumentException($"Unknown scenario: {scenario}");
                         }
 
                         options.Scenarios.Add(name);
@@ -155,14 +155,14 @@ internal sealed class LoadTestOptions
         "quick" => LoadProfile.Quick,
         "standard" => LoadProfile.Standard,
         "long" => LoadProfile.Long,
-        _ => throw new ArgumentException($"Неизвестный профиль: {value}. Допустимо: quick, standard, long."),
+        _ => throw new ArgumentException($"Unknown profile: {value}. Allowed values: quick, standard, long."),
     };
 
     private static string NextValue(string[] args, ref int index, string option)
     {
         if (index + 1 >= args.Length)
         {
-            throw new ArgumentException($"Для параметра {option} не указано значение.");
+            throw new ArgumentException($"No value specified for parameter {option}.");
         }
 
         return args[++index];
@@ -172,41 +172,41 @@ internal sealed class LoadTestOptions
     {
         return int.TryParse(value, out int result) && result > 0
             ? result
-            : throw new ArgumentException($"Параметр {option} ожидает положительное целое число.");
+            : throw new ArgumentException($"Parameter {option} expects a positive integer.");
     }
 
     private static long ParsePositiveLong(string value, string option)
     {
         return long.TryParse(value, out long result) && result > 0
             ? result
-            : throw new ArgumentException($"Параметр {option} ожидает положительное целое число.");
+            : throw new ArgumentException($"Parameter {option} expects a positive integer.");
     }
 
     public static void PrintHelp()
     {
         Console.WriteLine("""
-            Нагрузочные тесты фильтра Блума с ротацией.
+            Bloom filter load tests with rotation.
 
-            Использование:
-              dotnet run -c Release --project BloomFilter.LoadTests -- [сценарии] [параметры]
+            Usage:
+              dotnet run -c Release --project BloomFilter.LoadTests -- [scenarios] [options]
 
-            Сценарии (можно перечислить через запятую, по умолчанию all):
-              write           однопоточная запись и проверка базового фильтра и кольца
-              parallel-write  параллельная запись без ротации с проверкой отсутствия потерь
-              read            параллельное чтение заранее заполненного кольца
-              rotation        детерминированная проверка окна при частых ротациях под нагрузкой
-              fpr             фактическая доля ложных срабатываний на заполненном фильтре
-              memory          выделение памяти и аллокации на операцию
-              all             все сценарии
+            Scenarios (comma-separated list, default is all):
+              write           single-threaded write and check of the base filter and ring
+              parallel-write  parallel write without rotation, checking for lost updates
+              read            parallel read of a pre-filled ring
+              rotation        deterministic window checking under load with frequent rotations
+              fpr             actual false positive rate on the filled filter
+              memory          memory allocation and allocation per operation
+              all             all scenarios
 
-            Параметры:
-              --profile quick|standard|long  объём и длительность (по умолчанию quick)
-              --threads N                    число потоков (по умолчанию зависит от профиля)
-              --min-ops N                    минимальная пропускная способность, иначе код выхода 1
-              --list                         показать сценарии
-              --help                         эта справка
+            Options:
+              --profile quick|standard|long  volume and duration (default is quick)
+              --threads N                    number of threads (default depends on profile)
+              --min-ops N                    minimum throughput, otherwise exit code 1
+              --list                         show scenarios
+              --help                         this help message
 
-            Код выхода: 0 - все проверки пройдены, 1 - нарушен инвариант, 2 - ошибка аргументов.
+            Exit codes: 0 - all checks passed, 1 - invariant violated, 2 - argument error.
             """);
     }
 }

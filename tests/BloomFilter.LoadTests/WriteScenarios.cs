@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace BloomFilter.LoadTests;
 
@@ -7,16 +7,16 @@ internal static class WriteScenarios
     private const int BatchSize = 1024;
 
     /// <summary>
-    /// Однопоточная запись в базовый фильтр и в кольцо без ротации.
+    /// Single-threaded writing to the base filter and to the ring without rotation.
     /// </summary>
     public static ScenarioReport RunSingleThreaded(ProfileSettings settings)
     {
         long items = settings.WriteItems;
-        var report = new ScenarioReport($"Однопоточная запись: {Fmt.N(items)} уникальных значений");
+        var report = new ScenarioReport($"Single-threaded writing: {Fmt.N(items)} unique values");
 
         Span<char> buffer = stackalloc char[32];
 
-        // Разогрев выполняется на отдельных экземплярах, чтобы не засорять измеряемое кольцо.
+        // Warm-up is performed on separate instances to avoid polluting the measured ring.
         WarmUp(buffer, 10_000);
 
         var filter = new ConcurrentBloomFilter(items, 0.001);
@@ -64,25 +64,25 @@ internal static class WriteScenarios
         double ringRate = items / ringWatch.Elapsed.TotalSeconds;
         long allocated = allocAfter - allocBefore;
 
-        report.Row("Add, базовый фильтр", Fmt.Rate(filterRate));
-        report.Row("Add, кольцо (без ротации)", Fmt.Rate(ringRate));
-        report.Row("Задержка Add, базовый фильтр", filterLatency.Summary());
-        report.Row("Задержка Add, кольцо", ringLatency.Summary());
-        report.Row("Аллокации в куче", $"{Fmt.N(allocated)} Б ({allocated / (double)items:N4} Б/оп)");
-        report.Row("Учтено уникальных, кольцо", $"{Fmt.N(ring.TotalUniqueCount)} из {Fmt.N(items)}");
-        report.Row("Ротаций", Fmt.N(ring.RotationCount));
+        report.Row("Add, base filter", Fmt.Rate(filterRate));
+        report.Row("Add, ring (no rotation)", Fmt.Rate(ringRate));
+        report.Row("Add latency, base filter", filterLatency.Summary());
+        report.Row("Add latency, ring", ringLatency.Summary());
+        report.Row("Heap allocations", $"{Fmt.N(allocated)} B ({allocated / (double)items:N4} B/op)");
+        report.Row("Unique values counted, ring", $"{Fmt.N(ring.TotalUniqueCount)} of {Fmt.N(items)}");
+        report.Row("Rotations", Fmt.N(ring.RotationCount));
 
-        report.Check("Ротации не ожидались", ring.RotationCount == 0, $"получено {ring.RotationCount}");
+        report.Check("No rotations expected", ring.RotationCount == 0, $"got {ring.RotationCount}");
         report.Check(
-            "Учтено не менее 99% уникальных значений",
+            "At least 99% of unique values counted",
             ring.TotalUniqueCount >= (long)(items * 0.99),
-            $"учтено {ring.TotalUniqueCount}");
+            $"counted {ring.TotalUniqueCount}");
         report.Check(
-            "Запись не выделяет память в куче",
+            "Writing does not allocate on the heap",
             allocated < 64 * 1024,
-            $"выделено {allocated} Б");
+            $"allocated {allocated} B");
 
-        // Биты только накапливаются, поэтому каждое переданное значение должно находиться.
+        // Bits only accumulate, so every submitted value must be present.
         long sampled = 0;
         long present = 0;
         for (long i = 0; i < items; i += Math.Max(1, items / 10_000))
@@ -95,24 +95,24 @@ internal static class WriteScenarios
             }
         }
 
-        report.Check("Нет ложных отрицаний в базовом фильтре", present == sampled, $"{present} из {sampled}");
+        report.Check("No false negatives in the base filter", present == sampled, $"{present} of {sampled}");
         report.Throughput = ringRate;
         return report;
     }
 
     /// <summary>
-    /// Параллельная запись в кольцо, размер которого заведомо исключает ротацию:
-    /// проверяем, что под нагрузкой не теряется ни одно переданное значение.
+    /// Parallel writing to a ring whose size deliberately prevents rotation:
+    /// verify that no submitted value is lost under load.
     /// </summary>
     public static ScenarioReport RunParallel(ProfileSettings settings)
     {
         long total = settings.ParallelItems;
         int threads = settings.Threads;
 
-        // Порог на единицу больше общего числа записей, поэтому окно не проворачивается.
+        // The threshold is one greater than the total number of writes, so the ring does not rotate.
         BloomFilterRing ring = BloomFilterRingFactory.Create(3, total + 1, 0.001, fillPercent: 1.0);
         var report = new ScenarioReport(
-            $"Параллельная запись без ротации: {Fmt.N(total)} значений, {threads} потоков");
+            $"Parallel writing without rotation: {Fmt.N(total)} values, {threads} threads");
 
         long baseBudget = total / threads;
 
@@ -160,25 +160,25 @@ internal static class WriteScenarios
         long rejected = ParallelRunner.SumFailures(results);
         double rate = successes / wall.Elapsed.TotalSeconds;
 
-        report.Row("Принято уникальных", Fmt.N(successes));
-        report.Row("Отклонено как известные", Fmt.N(rejected));
-        report.Row("Время", Fmt.Duration(wall.Elapsed));
-        report.Row("Пропускная способность", Fmt.Rate(rate));
-        report.Row("Задержка записи", ParallelRunner.MergeLatency(results).Summary());
-        report.Row("Всего учтено кольцом", Fmt.N(ring.TotalUniqueCount));
-        report.Row("Ротаций", Fmt.N(ring.RotationCount));
+        report.Row("Unique values accepted", Fmt.N(successes));
+        report.Row("Rejected as already known", Fmt.N(rejected));
+        report.Row("Elapsed time", Fmt.Duration(wall.Elapsed));
+        report.Row("Throughput", Fmt.Rate(rate));
+        report.Row("Write latency", ParallelRunner.MergeLatency(results).Summary());
+        report.Row("Total counted by ring", Fmt.N(ring.TotalUniqueCount));
+        report.Row("Rotations", Fmt.N(ring.RotationCount));
 
-        report.Check("Ротации не ожидались", ring.RotationCount == 0, $"получено {ring.RotationCount}");
+        report.Check("No rotations expected", ring.RotationCount == 0, $"got {ring.RotationCount}");
         report.Check(
-            "Счётчик кольца совпадает с числом принятых значений",
+            "Ring counter matches accepted values",
             ring.TotalUniqueCount == successes,
-            $"кольцо {ring.TotalUniqueCount}, принято {successes}");
+            $"ring {ring.TotalUniqueCount}, accepted {successes}");
         report.Check(
-            "Отклонений не больше 1% (ложные срабатывания)",
+            "Rejections do not exceed 1% (false positives)",
             rejected <= total / 100,
-            $"отклонено {rejected}");
+            $"rejected {rejected}");
 
-        // В невращающемся кольце все переданные ключи должны читаться как присутствующие.
+        // In a non-rotating ring, all submitted keys must be reported as present.
         long missing = 0;
         long sampled = 0;
         Span<char> check = stackalloc char[32];
@@ -192,14 +192,14 @@ internal static class WriteScenarios
             }
         }
 
-        report.Check("Нет ложных отрицаний", missing == 0, $"отсутствует {missing} из {sampled}");
+        report.Check("No false negatives", missing == 0, $"missing {missing} of {sampled}");
         report.Throughput = rate;
         return report;
     }
 
     private static void WarmUp(Span<char> buffer, int count)
     {
-        // Одноразовые экземпляры: важны только прогрев JIT и веток кода.
+        // One-time instances: only JIT and code-path warm-up matter.
         var filter = new ConcurrentBloomFilter(count * 2, 0.001);
         BloomFilterRing ring = BloomFilterRingFactory.Create(3, count * 2, 0.001, fillPercent: 1.0);
 
@@ -211,3 +211,4 @@ internal static class WriteScenarios
         }
     }
 }
+

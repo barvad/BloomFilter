@@ -1,48 +1,48 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace BloomFilter
 {
     /// <summary>
-    /// Параметры кольцевого ротатора фильтров Блума.
+    /// Parameters of the ring rotator for Bloom filters.
     /// </summary>
     public sealed class BloomFilterRingOptions
     {
         /// <summary>
-        /// Количество фильтров в кольце (n).
+        /// The number of filters in the ring (n).
         /// </summary>
         public int FilterCount { get; init; } = 3;
 
         /// <summary>
-        /// Ожидаемая ёмкость каждого фильтра: по ней рассчитывается размер битовой карты.
+        /// The expected capacity of each filter: the size of the bitmap is calculated based on this.
         /// </summary>
         public long ExpectedItems { get; init; } = 1_000_000;
 
         /// <summary>
-        /// Доля ожидаемой ёмкости, при которой активный фильтр заменяется следующим в кольце.
-        /// 0.9 означает переключение после 90% от <see cref="ExpectedItems"/>.
+        /// The portion of the expected capacity at which the active filter is replaced by the next one in the ring.
+        /// 0.9 means switching after 90% of <see cref="ExpectedItems"/>.
         /// </summary>
         public double FillPercent { get; init; } = 0.9;
 
         /// <summary>
-        /// Допустимая вероятность ложного срабатывания (например, 0.001 для 0.1%).
+        /// The acceptable probability of false positives (for example, 0.001 for 0.1%).
         /// </summary>
         public double FalsePositiveRate { get; init; } = 0.001;
     }
 
     /// <summary>
-    /// Фабрика кольцевых ротаторов фильтров Блума.
+    /// Factory for ring rotators of Bloom filters.
     /// </summary>
     public static class BloomFilterRingFactory
     {
         /// <summary>
-        /// Создает кольцевой ротатор из <paramref name="filterCount"/> фильтров ёмкостью
-        /// <paramref name="expectedItems"/>; ротация происходит после заполнения на
-        /// <paramref name="fillPercent"/> от этой ёмкости.
+        /// Creates a ring rotator from <paramref name="filterCount"/> filters with a capacity of
+        /// <paramref name="expectedItems"/>; rotation occurs after filling to
+        /// <paramref name="fillPercent"/> of this capacity.
         /// </summary>
-        /// <param name="filterCount">Количество фильтров в кольце (n).</param>
-        /// <param name="expectedItems">Ожидаемая ёмкость каждого фильтра.</param>
-        /// <param name="falsePositiveRate">Допустимая вероятность ложного срабатывания.</param>
-        /// <param name="fillPercent">Доля ёмкости, после которой происходит ротация (по умолчанию 0.9).</param>
+        /// <param name="filterCount">The number of filters in the ring (n).</param>
+        /// <param name="expectedItems">The expected capacity of each filter.</param>
+        /// <param name="falsePositiveRate">The acceptable probability of false positives.</param>
+        /// <param name="fillPercent">The portion of capacity after which rotation occurs (defaults to 0.9).</param>
         public static BloomFilterRing Create(
             int filterCount,
             long expectedItems,
@@ -59,7 +59,7 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Создает кольцевой ротатор по набору параметров.
+        /// Creates a ring rotator from a set of parameters.
         /// </summary>
         public static BloomFilterRing Create(BloomFilterRingOptions options)
         {
@@ -70,7 +70,7 @@ namespace BloomFilter
                 throw new ArgumentOutOfRangeException(
                     nameof(options),
                     options.FilterCount,
-                    "Количество фильтров в кольце должно быть не меньше двух.");
+                    "The number of filters in the ring must be at least two.");
             }
 
             if (options.ExpectedItems <= 0)
@@ -78,7 +78,7 @@ namespace BloomFilter
                 throw new ArgumentOutOfRangeException(
                     nameof(options),
                     options.ExpectedItems,
-                    "Ожидаемая ёмкость фильтра должна быть больше нуля.");
+                    "The expected capacity of the filter must be greater than zero.");
             }
 
             if (options.FillPercent is <= 0 or > 1)
@@ -86,7 +86,7 @@ namespace BloomFilter
                 throw new ArgumentOutOfRangeException(
                     nameof(options),
                     options.FillPercent,
-                    "Доля заполнения должна быть в диапазоне (0, 1].");
+                    "The fill percentage must be in the range (0, 1].");
             }
 
             if (options.FalsePositiveRate is <= 0 or >= 1)
@@ -94,10 +94,10 @@ namespace BloomFilter
                 throw new ArgumentOutOfRangeException(
                     nameof(options),
                     options.FalsePositiveRate,
-                    "Вероятность ложного срабатывания должна быть в диапазоне (0, 1).");
+                    "The false positive rate must be in the range (0, 1).");
             }
 
-            // Порог переключения считается здесь, а не передается снаружи.
+            // The rotation threshold is calculated here, not passed from outside.
             long rotationThreshold = Math.Max(1, (long)Math.Ceiling(options.ExpectedItems * options.FillPercent));
 
             return new BloomFilterRing(
@@ -109,29 +109,29 @@ namespace BloomFilter
     }
 
     /// <summary>
-    /// Кольцевой ротатор фильтров Блума без блокировок на пути записи и чтения.
+    /// A lock-free ring rotator for Bloom filters for concurrent writes and reads.
     /// </summary>
     /// <remarks>
-    /// Содержит n фильтров. Запись всегда идет в активный фильтр; когда он принимает
-    /// порог уникальных значений (90% ёмкости по умолчанию), активным становится следующий
-    /// фильтр кольца, а самый старый экземпляр очищается и переиспользуется.
-    /// Проверка наличия выполняется по всем n фильтрам, поэтому окно «памяти» составляет
-    /// до n * rotationThreshold значений.
+    /// Contains n filters. Writing always goes to the active filter; when it reaches the
+    /// threshold of unique values (90% capacity by default), the next filter in the ring becomes active,
+    /// and the oldest instance is cleared and reused.
+    /// Existence checking is performed across all n filters, so the "memory" window is
+    /// up to n * rotationThreshold values.
     ///
-    /// Состояние кольца хранится в неизменяемом снимке (массив фильтров + индекс активного), который
-    /// публикуется победителем CAS. Ротацию выполняет ровно один поток; остальные просто продолжают писать.
+    /// The state of the ring is stored in an immutable snapshot (array of filters + active index), which is
+    /// published by the CAS winner. Rotation is performed by exactly one thread; the others just continue to write.
     ///
-    /// При ротации освободившийся фильтр очищается на месте и переиспользуется, поэтому новые
-    /// экземпляры и битовые карты не выделяются. Плата: в момент очистки читатель, который ещё
-    /// держит старый снимок, может получить ложное отрицание по самым старым значениям -
-    /// они и так покидают окно.
+    /// During rotation, the freed filter is cleared in place and reused, so new
+    /// instances and bitmaps are not allocated. The cost: at the moment of clearing, a reader that still
+    /// holds the old snapshot may get a false negative for the oldest values -
+    /// they are leaving the window anyway.
     ///
-    /// Если между записью битов и публикацией кольцо успело провернуться, писатель замечает это
-    /// (снимок изменился) и повторяет операцию на актуальном снимке, поэтому значение не теряется.
+    /// If the ring managed to rotate between the bit writing and the publishing, the writer notices this
+    /// (the snapshot has changed) and repeats the operation on the current snapshot, so the value is not lost.
     ///
-    /// Плата за отказ от блокировки: при одновременной вставке одного и того же значения несколькими
-    /// потоками счётчик уникальных может увеличиться более одного раза (проверка и вставка не атомарны).
-    /// Как и любой фильтр Блума, счётчик в принципе приблизителен из-за ложных срабатываний.
+    /// The cost of avoiding the lock: with simultaneous insertion of the same value by several
+    /// threads, the unique counter may increase more than once (check and insert are not atomic).
+    /// Like any Bloom filter, the count is approximate due to false positives.
     /// </remarks>
     public sealed class BloomFilterRing
     {
@@ -154,22 +154,22 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Количество фильтров в кольце (n).
+        /// The number of filters in the ring (n).
         /// </summary>
         public int FilterCount => _filterCount;
 
         /// <summary>
-        /// Вычисленный порог уникальных значений, после которого происходит ротация.
+        /// The calculated threshold of unique values after which rotation occurs.
         /// </summary>
         public long RotationThreshold => _rotationThreshold;
 
         /// <summary>
-        /// Индекс активного фильтра в кольце.
+        /// The index of the active filter in the ring.
         /// </summary>
         public int ActiveIndex => Volatile.Read(ref _state).ActiveIndex;
 
         /// <summary>
-        /// Количество уникальных значений, принятых активным фильтром.
+        /// The number of unique values accepted by the active filter.
         /// </summary>
         public long ActiveUniqueCount
         {
@@ -181,18 +181,18 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Общее количество уникальных значений, принятых ротатором с момента создания.
+        /// The total number of unique values accepted by the rotator since its creation.
         /// </summary>
         public long TotalUniqueCount => Interlocked.Read(ref _totalUniqueCount);
 
         /// <summary>
-        /// Сколько раз кольцо уже переключалось на следующий фильтр.
+        /// How many times the ring has already switched to the next filter.
         /// </summary>
         public long RotationCount => Interlocked.Read(ref _rotationCount);
 
         /// <summary>
-        /// Добавляет строку в активный фильтр, если ротатор ещё не знает это значение.
-        /// Возвращает true, если значение встретилось впервые.
+        /// Adds a string to the active filter if the rotator does not yet recognize this value.
+        /// Returns true if the value is encountered for the first time.
         /// </summary>
         public bool TryAdd(ReadOnlySpan<char> item)
         {
@@ -200,13 +200,13 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Добавляет набор байт в активный фильтр, если ротатор ещё не знает это значение.
-        /// Возвращает true, если значение встретилось впервые.
+        /// Adds a byte array to the active filter if the rotator does not yet recognize this value.
+        /// Returns true if the value is encountered for the first time.
         /// </summary>
         public bool TryAdd(ReadOnlySpan<byte> data)
         {
-            // При повторе пропускаем проверку наличия: значение уже было записано в предыдущей
-            // попытке, поэтому второй раз его "уникальным" не считаем - счётчик увеличится один раз.
+            // On retry, skip the existence check: the value was already written in the previous
+            // attempt, so the second time it is not considered "unique" - the counter will increase only once.
             bool retried = false;
 
             while (true)
@@ -221,8 +221,8 @@ namespace BloomFilter
                 int active = state.ActiveIndex;
                 state.Filters[active].Add(data);
 
-                // Если за время записи кольцо провернулось, биты могли попасть в фильтр,
-                // который уже выведен из окна. Повторяем операцию на актуальном снимке.
+                // If the ring rotated during the write, the bits might have gone to a filter,
+                // which is already out of the window. Repeat the operation on the current snapshot.
                 if (!ReferenceEquals(Volatile.Read(ref _state), state))
                 {
                     retried = true;
@@ -242,7 +242,7 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Добавляет строку в активный фильтр. Возвращаемое значение игнорируется.
+        /// Adds a string to the active filter. The return value is ignored.
         /// </summary>
         public void Add(ReadOnlySpan<char> item)
         {
@@ -250,7 +250,7 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Добавляет набор байт в активный фильтр. Возвращаемое значение игнорируется.
+        /// Adds a byte array to the active filter. The return value is ignored.
         /// </summary>
         public void Add(ReadOnlySpan<byte> data)
         {
@@ -258,8 +258,8 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Проверяет наличие строки хотя бы в одном фильтре кольца.
-        /// False - элемента ТОЧНО нет. True - элемент, скорее всего, есть.
+        /// Checks for the presence of a string in at least one filter of the ring.
+        /// False - the element is DEFINITELY not present. True - the element is likely present.
         /// </summary>
         public bool MightContain(ReadOnlySpan<char> item)
         {
@@ -267,8 +267,8 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Проверяет наличие набора байт хотя бы в одном фильтре кольца.
-        /// False - элемента ТОЧНО нет. True - элемент, скорее всего, есть.
+        /// Checks for the presence of a byte array in at least one filter of the ring.
+        /// False - the element is DEFINITELY not present. True - the element is likely present.
         /// </summary>
         public bool MightContain(ReadOnlySpan<byte> data)
         {
@@ -276,11 +276,11 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Полностью очищает кольцо, публикуя новый пустой снимок.
+        /// Completely clears the ring, publishing a new empty snapshot.
         /// </summary>
         /// <remarks>
-        /// Не блокирует писателей: значения, добавленные в момент вызова, могут быть потеряны.
-        /// Вызывайте, когда запись остановлена.
+        /// Does not block writers: values added during the call may be lost.
+        /// Call when writing is stopped.
         /// </remarks>
         public void Clear()
         {
@@ -312,7 +312,7 @@ namespace BloomFilter
 
         private void TryRotate(RingState state)
         {
-            // Для каждого снимка ротацию запускает только один поток-победитель.
+            // For each snapshot, rotation is started by only one winning thread.
             if (Interlocked.CompareExchange(ref state.RotationStarted, 1, 0) != 0)
             {
                 return;
@@ -320,14 +320,14 @@ namespace BloomFilter
 
             int next = (state.ActiveIndex + 1) % state.Filters.Length;
 
-            // Освободившийся фильтр очищаем на месте и переиспользуем: новые битовые карты не выделяются.
-            // В старом снимке в него уже никто не пишет - писатели всегда идут в ActiveIndex.
+            // The freed filter is cleared in place and reused: no new bitmaps are allocated.
+            // In the old snapshot, no one is writing to it anymore - writers always go to ActiveIndex.
             state.Filters[next].Reset();
 
-            // Массив ссылок не меняется, поэтому снимки могут делить его между собой.
-            // Меняется только индекс активного фильтра.
-            // CAS, а не Volatile.Write: если параллельный Clear() уже опубликовал новый снимок,
-            // ротация не должна перетирать его своим устаревшим состоянием.
+            // The array of references does not change, so snapshots can share it.
+            // Only the active filter index is changed.
+            // CAS, not Volatile.Write: if a parallel Clear() has already published a new snapshot,
+            // rotation should not overwrite it with its outdated state.
             var rotated = new RingState(state.Filters, next);
 
             if (ReferenceEquals(Interlocked.CompareExchange(ref _state, rotated, state), state))
@@ -341,10 +341,10 @@ namespace BloomFilter
             public readonly ConcurrentBloomFilter[] Filters;
             public readonly int ActiveIndex;
 
-            /// <summary>Счётчик уникальных значений активного фильтра; нужен только пока снимок актуален.</summary>
+            /// <summary>Counter of unique values of the active filter; needed only while the snapshot is current.</summary>
             public long ActiveCount;
 
-            /// <summary>Флаг «ротация этого снимка уже запущена» (0/1).</summary>
+            /// <summary>Flag "rotation of this snapshot has already started" (0/1).</summary>
             public int RotationStarted;
 
             public RingState(ConcurrentBloomFilter[] filters, int activeIndex)
@@ -355,8 +355,8 @@ namespace BloomFilter
 
             public bool MightContain(ReadOnlySpan<byte> data)
             {
-                // Идём от активного фильтра к самым старым: недавно добавленные значения
-                // находятся с первой проверки, а редкие промахи всё равно проверяют все n.
+                // Go from the active filter to the oldest: recently added values
+                // are found with the first check, and rare misses check all n anyway.
                 int index = ActiveIndex;
 
                 for (int i = 0; i < Filters.Length; i++)
@@ -374,3 +374,4 @@ namespace BloomFilter
         }
     }
 }
+

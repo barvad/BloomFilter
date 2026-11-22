@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Globalization;
 
 namespace BloomFilter.LoadTests;
@@ -9,16 +9,16 @@ internal static class Fmt
 
     public static string Rate(double opsPerSecond)
     {
-        return $"{opsPerSecond.ToString("N0", CultureInfo.InvariantCulture)} оп/с";
+        return $"{opsPerSecond.ToString("N0", CultureInfo.InvariantCulture)} ops/s";
     }
 
-    public static string Micros(double value) => $"{value.ToString("N2", CultureInfo.InvariantCulture)} мкс";
+    public static string Micros(double value) => $"{value.ToString("N2", CultureInfo.InvariantCulture)} μs";
 
-    public static string Duration(TimeSpan value) => $"{value.TotalSeconds.ToString("N2", CultureInfo.InvariantCulture)} с";
+    public static string Duration(TimeSpan value) => $"{value.TotalSeconds.ToString("N2", CultureInfo.InvariantCulture)} s";
 
     public static string Bytes(long value)
     {
-        string[] units = ["Б", "КБ", "МБ", "ГБ"];
+        string[] units = ["B", "KB", "MB", "GB"];
         double size = value;
         int unit = 0;
 
@@ -47,7 +47,7 @@ internal sealed class ScenarioReport
 
     public bool Ok => _failures.Count == 0;
 
-    /// <summary>Основная пропускная способность сценария, оп/с (если применимо).</summary>
+    /// <summary>Scenario's main throughput, ops/s (if applicable).</summary>
     public double? Throughput { get; set; }
 
     public void Row(string label, string value) => _rows.Add((label, value));
@@ -81,16 +81,16 @@ internal sealed class ScenarioReport
 
         if (Ok)
         {
-            Console.WriteLine("  ИТОГ: OK");
+            Console.WriteLine("  RESULT: OK");
         }
         else
         {
             foreach (string failure in _failures)
             {
-                Console.WriteLine($"  ПРОВАЛ: {failure}");
+                Console.WriteLine($"  FAILED: {failure}");
             }
 
-            Console.WriteLine("  ИТОГ: ПРОВАЛ");
+            Console.WriteLine("  RESULT: FAILED");
         }
     }
 
@@ -99,9 +99,9 @@ internal sealed class ScenarioReport
         var report = new ScenarioReport(title);
         double opsPerSecond = operations / Math.Max(elapsed.TotalSeconds, 1e-9);
 
-        report.Row("Операций", Fmt.N(operations));
-        report.Row("Время", Fmt.Duration(elapsed));
-        report.Row("Пропускная способность", Fmt.Rate(opsPerSecond));
+        report.Row("Operations", Fmt.N(operations));
+        report.Row("Time", Fmt.Duration(elapsed));
+        report.Row("Throughput", Fmt.Rate(opsPerSecond));
         return report;
     }
 }
@@ -149,7 +149,7 @@ internal sealed class LatencySamples
     public string Summary()
     {
         return Count == 0
-            ? "нет данных"
+            ? "no data"
             : $"p50 {Fmt.Micros(Percentile(0.50))}, p95 {Fmt.Micros(Percentile(0.95))}, p99 {Fmt.Micros(Percentile(0.99))}";
     }
 }

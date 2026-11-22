@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace BloomFilter.Tests;
 
@@ -108,7 +108,7 @@ public sealed class ConcurrentBloomFilterTests
         using var stream = new MemoryStream();
         original.SaveTo(stream);
 
-        // SaveTo оставляет поток открытым - проверяем, что чтение возможно без пересоздания.
+        // SaveTo leaves the stream open - check that reading is possible without recreating.
         Assert.True(stream.CanWrite);
 
         stream.Position = 0;
@@ -141,8 +141,8 @@ public sealed class ConcurrentBloomFilterTests
     [Fact]
     public void ObservableFalsePositiveRateStaysWithinLooseBound()
     {
-        // Статистическая проверка: фильтр рассчитан на 1% при ёмкости 1000,
-        // поэтому при полном заполнении доля ложных срабатываний не должна быть заметно выше.
+        // Statistical check: the filter is designed for 1% at a capacity of 1000,
+        // so when full, the false positive rate should not be noticeably higher.
         const int expectedItems = 1_000;
         const int probes = 20_000;
         const double targetRate = 0.01;
@@ -166,15 +166,15 @@ public sealed class ConcurrentBloomFilterTests
         double observedRate = falsePositives / (double)probes;
         Assert.True(
             observedRate <= allowedRate,
-            $"Наблюдаемая доля ложных срабатываний {observedRate:P4} превышает допустимую {allowedRate:P4}.");
+            $"Observed false positive rate {observedRate:P4} exceeds allowed rate {allowedRate:P4}.");
     }
 
     [Fact]
     public void SmallFilterWithVeryLowTargetRateDoesNotDegradeToCollapsedProbes()
     {
-        // Регрессия: при чётном шаге двойного хеширования и размере карты, кратном 64,
-        // k проверок ключа могли схлопнуться в 2-3 позиции. На ёмкости 1000 при цели 1e-9
-        // это давало единичные ложные срабатывания на миллионы проверок.
+        // Regression: with an even double hashing step and a map size multiple of 64,
+        // key checks could collapse into 2-3 positions. At a capacity of 1000 with a target of 1e-9
+        // this caused single false positives over millions of checks.
         const int expectedItems = 1_000;
         const int known = 900;
         const int probes = 2_000_000;
@@ -201,6 +201,6 @@ public sealed class ConcurrentBloomFilterTests
 
         Assert.True(
             falsePositives <= allowedFalsePositives,
-            $"Наблюдалось {falsePositives} ложных срабатываний на {probes} проверок при целевой доле 1e-9.");
+            $"Observed {falsePositives} false positives over {probes} checks at a target rate of 1e-9.");
     }
 }

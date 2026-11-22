@@ -1,10 +1,10 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace BloomFilter.Tests;
 
 public sealed class BloomFilterRingTests
 {
-    // Ёмкость 200 при заполнении 0.5 даёт порог ротации ровно 100 значений.
+    // Capacity 200 with 0.5 fill gives a rotation threshold of exactly 100 values.
     private const int GenerationSize = 100;
 
     private static BloomFilterRing CreateRing(
@@ -101,7 +101,7 @@ public sealed class BloomFilterRingTests
         Assert.Equal(0L, ring.RotationCount);
         Assert.Equal(99L, ring.ActiveUniqueCount);
 
-        // Сотое уникальное значение заполняет активный фильтр и проворачивает кольцо.
+        // The hundredth unique value fills the active filter and rotates the ring.
         Assert.True(ring.TryAdd($"gen0-{GenerationSize - 1}"));
 
         Assert.Equal(1, ring.ActiveIndex);
@@ -142,12 +142,12 @@ public sealed class BloomFilterRingTests
         AddAll(ring, gen0);
         AddAll(ring, gen1);
 
-        // После двух ротаций оба поколения ещё лежат в кольце.
+        // After two rotations, both generations are still in the ring.
         Assert.Equal(2L, ring.RotationCount);
         Assert.All(gen0, item => Assert.True(ring.MightContain(item)));
         Assert.All(gen1, item => Assert.True(ring.MightContain(item)));
 
-        // Третья ротация переиспользует фильтр поколения gen0 - оно покидает окно.
+        // The third rotation reuses the filter of generation gen0 - it leaves the window.
         AddAll(ring, gen2);
 
         Assert.Equal(3L, ring.RotationCount);
@@ -163,7 +163,7 @@ public sealed class BloomFilterRingTests
 
         Assert.True(ring.TryAdd("old"));
 
-        // Добираем поколение до порога вместе со старым значением: 1 + 99 = 100.
+        // Completes the generation up to the threshold together with the old value: 1 + 99 = 100.
         for (int i = 0; i < GenerationSize - 1; i++)
         {
             ring.Add($"gen0-{i}");
@@ -171,7 +171,7 @@ public sealed class BloomFilterRingTests
 
         Assert.Equal(1L, ring.RotationCount);
 
-        // Старое значение всё ещё в окне, поэтому повторно не добавляется.
+        // The old value is still in the window, so it is not added again.
         Assert.False(ring.TryAdd("old"));
         Assert.Equal(100L, ring.TotalUniqueCount);
     }
@@ -224,7 +224,7 @@ public sealed class BloomFilterRingTests
         Assert.Equal(0L, ring.RotationCount);
         Assert.All(values, item => Assert.False(ring.MightContain(item)));
 
-        // После очистки кольцо снова пригодно к работе.
+        // After clearing, the ring is again ready for use.
         Assert.True(ring.TryAdd("fresh"));
         Assert.True(ring.MightContain("fresh"));
         Assert.Equal(1L, ring.TotalUniqueCount);

@@ -4,10 +4,30 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <PackageId>BloomFilter</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>barvad</Authors>
+    <Company>barvad</Company>
+    <Description>Thread-safe Bloom filters for .NET, including a lock-free rotating Bloom filter ring for bounded time windows.</Description>
+    <PackageTags>bloom-filter;probabilistic;thread-safe;concurrent;cache;data-structures</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/barvad/BloomFilter</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/barvad/BloomFilter</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.IO.Hashing" Version="10.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="README.md" Link="README.md" />
   </ItemGroup>
 
 </Project>

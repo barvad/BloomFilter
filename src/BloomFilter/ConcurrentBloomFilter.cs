@@ -4,6 +4,9 @@ using System.Runtime.InteropServices;
 
 namespace BloomFilter
 {
+    /// <summary>
+    /// A thread-safe Bloom filter.
+    /// </summary>
     public sealed class ConcurrentBloomFilter
     {
         private readonly ulong[] _bits;
@@ -11,10 +14,10 @@ namespace BloomFilter
         private readonly int _hashCount;
 
         /// <summary>
-        /// Создает потокобезопасный фильтр Блума.
+        /// Creates a thread-safe Bloom filter.
         /// </summary>
-        /// <param name="expectedItems">Ожидаемое количество уникальных элементов (например, 1_500_000 с запасом).</param>
-        /// <param name="falsePositiveRate">Допустимая вероятность ложного срабатывания (например, 0.001 для 0.1%).</param>
+        /// <param name="expectedItems">Expected number of unique items (e.g., 1_500_000 with a safety margin).</param>
+        /// <param name="falsePositiveRate">Acceptable false positive rate (e.g., 0.001 for 0.1%).</param>
         public ConcurrentBloomFilter(long expectedItems, double falsePositiveRate = 0.001)
         {
             if (expectedItems <= 0)
@@ -22,19 +25,19 @@ namespace BloomFilter
             if (falsePositiveRate is <= 0 or >= 1)
                 throw new ArgumentOutOfRangeException(nameof(falsePositiveRate));
 
-            // Оптимальное количество бит: m = -(n * ln(p)) / (ln(2)^2)
+            // Optimal number of bits: m = -(n * ln(p)) / (ln(2)^2)
             double m = -(expectedItems * Math.Log(falsePositiveRate)) / (Math.Log(2) * Math.Log(2));
 
-            // Округляем вверх до кратности 64, чтобы идеально лечь в ulong[]
+            // Round up to the nearest multiple of 64 to fit perfectly into ulong[]
             long ulongCount = (long)Math.Ceiling(m / 64.0);
             _bits = new ulong[ulongCount];
             _bitCount = (ulong)ulongCount * 64;
 
-            // Оптимальное количество хеш-функций: k = (m / n) * ln(2)
+            // Optimal number of hash functions: k = (m / n) * ln(2)
             _hashCount = Math.Max(1, (int)Math.Round((_bitCount / (double)expectedItems) * Math.Log(2)));
         }
 
-        // Приватный конструктор для восстановления из потока/файла
+        // Private constructor for deserialization from stream/file
         private ConcurrentBloomFilter(ulong[] bits, int hashCount)
         {
             _bits = bits;
@@ -43,17 +46,17 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Размер выделенной памяти в байтах.
+        /// Size of the allocated memory in bytes.
         /// </summary>
         public long SizeInBytes => (long)_bits.Length * sizeof(ulong);
 
         /// <summary>
-        /// Очищает битовую карту, сохраняя её размер и количество хеш-функций.
+        /// Clears the bit map, preserving its size and the number of hash functions.
         /// </summary>
         /// <remarks>
-        /// Не потокобезопасен относительно параллельного чтения: на время очистки возможны
-        /// ложные отрицания. В кольцевом ротаторе вызывается только для фильтра, который
-        /// покидает окно, поэтому его данные и так устарели.
+        /// Not thread-safe with respect to concurrent reads: false negatives are possible
+        /// during the clearing process. In the ring buffer, this is called only for the filter that
+        /// leaves the window, so its data is already outdated.
         /// </remarks>
         public void Reset()
         {
@@ -61,7 +64,7 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Добавляет строку (URL) в фильтр без выделения памяти в куче.
+        /// Adds a string (URL) to the filter without heap allocation.
         /// </summary>
         public void Add(ReadOnlySpan<char> item)
         {
@@ -69,7 +72,7 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Добавляет произвольный набор байт в фильтр.
+        /// Adds an arbitrary byte array to the filter.
         /// </summary>
         public void Add(ReadOnlySpan<byte> data)
         {
@@ -78,10 +81,10 @@ namespace BloomFilter
             for (int i = 0; i < _hashCount; i++)
             {
                 ulong bitIndex = (h1 + (ulong)i * h2) % _bitCount;
-                int arrayIndex = (int)(bitIndex >> 6); // Деление на 64
-                ulong mask = 1UL << (int)(bitIndex & 63); // Остаток от деления на 64
+                int arrayIndex = (int)(bitIndex >> 6); // Division by 64
+                ulong mask = 1UL << (int)(bitIndex & 63); // Remainder of division by 64
 
-                // Быстрая проверка перед атомарной записью снижает нагрузку на кэш процессора (cache line bouncing)
+                // Quick check before atomic write reduces CPU cache load (cache line bouncing)
                 if ((Volatile.Read(ref _bits[arrayIndex]) & mask) == 0)
                 {
                     Interlocked.Or(ref _bits[arrayIndex], mask);
@@ -90,8 +93,8 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Проверяет наличие строки (URL).
-        /// False - элемента ТОЧНО нет. True - элемент, скорее всего, есть.
+        /// Checks the presence of a string (URL).
+        /// False - the item is DEFINITELY not there. True - the item is probably there.
         /// </summary>
         public bool MightContain(ReadOnlySpan<char> item)
         {
@@ -99,7 +102,7 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Проверяет наличие набора байт.
+        /// Checks the presence of a byte array.
         /// </summary>
         public bool MightContain(ReadOnlySpan<byte> data)
         {
@@ -121,14 +124,18 @@ namespace BloomFilter
         }
 
         /// <summary>
-        /// Комбинированный метод: проверяет наличие и сразу добавляет, если элемента не было.
-        /// Возвращает true, если элемент был добавлен впервые (не встречался ранее).
+        /// Combined method: checks presence and immediately adds if the item was not present.
+        /// Returns true if the item was added for the first time (was not seen before).
         /// </summary>
         public bool TryAdd(ReadOnlySpan<char> item)
         {
             return TryAdd(MemoryMarshal.AsBytes(item));
         }
 
+        /// <summary>
+        /// Atomically checks and adds a byte sequence.
+        /// Returns true when the value was added for the first time.
+        /// </summary>
         public bool TryAdd(ReadOnlySpan<byte> data)
         {
             var (h1, h2) = ComputeHashes(data);
@@ -156,17 +163,17 @@ namespace BloomFilter
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static (ulong h1, ulong h2) ComputeHashes(ReadOnlySpan<byte> data)
         {
-            // Получаем сразу 128 бит (два независимых 64-битных хеша) за один проход
+            // Obtain 128 bits (two independent 64-bit hashes) in one go
             UInt128 hash = XxHash128.HashToUInt128(data);
 
-            // Шаг двойного хеширования делаем нечётным. Размер битовой карты кратен 64,
-            // поэтому нечётный шаг гарантирует орбиту длиной не меньше 64 позиций:
-            // k проверок не могут схлопнуться в пару позиций даже на маленьких фильтрах.
+            // Make the double hashing step odd. The bit map size is a multiple of 64,
+            // so an odd step ensures an orbit of at least 64 positions:
+            // k checks cannot collapse into a pair of positions even in small filters.
             return ((ulong)hash, (ulong)(hash >> 64) | 1UL);
         }
 
         /// <summary>
-        /// Сохраняет состояние фильтра в поток (например, в файл перед перезапуском).
+        /// Saves the filter's state to a stream (e.g., to a file before a restart).
         /// </summary>
         public void SaveTo(Stream stream)
         {
@@ -174,13 +181,13 @@ namespace BloomFilter
             writer.Write(_hashCount);
             writer.Write(_bits.Length);
 
-            // Записываем весь массив напрямую как сырые байты без лишних копирований
+            // Write the entire array directly as raw bytes without unnecessary copies
             ReadOnlySpan<byte> rawBytes = MemoryMarshal.AsBytes(_bits.AsSpan());
             stream.Write(rawBytes);
         }
 
         /// <summary>
-        /// Загружает фильтр из потока.
+        /// Loads the filter from a stream.
         /// </summary>
         public static ConcurrentBloomFilter LoadFrom(Stream stream)
         {
