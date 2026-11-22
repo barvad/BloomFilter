@@ -7,7 +7,7 @@ namespace BloomFilter
     /// <summary>
     /// A thread-safe Bloom filter.
     /// </summary>
-    public sealed class ConcurrentBloomFilter
+    public sealed class ConcurrentBloomFilter : IBloomFilter
     {
         private readonly ulong[] _bits;
         private readonly ulong _bitCount;

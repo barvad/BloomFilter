@@ -3,112 +3,6 @@
 namespace BloomFilter
 {
     /// <summary>
-    /// Parameters of the ring rotator for Bloom filters.
-    /// </summary>
-    public sealed class BloomFilterRingOptions
-    {
-        /// <summary>
-        /// The number of filters in the ring (n).
-        /// </summary>
-        public int FilterCount { get; init; } = 3;
-
-        /// <summary>
-        /// The expected capacity of each filter: the size of the bitmap is calculated based on this.
-        /// </summary>
-        public long ExpectedItems { get; init; } = 1_000_000;
-
-        /// <summary>
-        /// The portion of the expected capacity at which the active filter is replaced by the next one in the ring.
-        /// 0.9 means switching after 90% of <see cref="ExpectedItems"/>.
-        /// </summary>
-        public double FillPercent { get; init; } = 0.9;
-
-        /// <summary>
-        /// The acceptable probability of false positives (for example, 0.001 for 0.1%).
-        /// </summary>
-        public double FalsePositiveRate { get; init; } = 0.001;
-    }
-
-    /// <summary>
-    /// Factory for ring rotators of Bloom filters.
-    /// </summary>
-    public static class BloomFilterRingFactory
-    {
-        /// <summary>
-        /// Creates a ring rotator from <paramref name="filterCount"/> filters with a capacity of
-        /// <paramref name="expectedItems"/>; rotation occurs after filling to
-        /// <paramref name="fillPercent"/> of this capacity.
-        /// </summary>
-        /// <param name="filterCount">The number of filters in the ring (n).</param>
-        /// <param name="expectedItems">The expected capacity of each filter.</param>
-        /// <param name="falsePositiveRate">The acceptable probability of false positives.</param>
-        /// <param name="fillPercent">The portion of capacity after which rotation occurs (defaults to 0.9).</param>
-        public static BloomFilterRing Create(
-            int filterCount,
-            long expectedItems,
-            double falsePositiveRate = 0.001,
-            double fillPercent = 0.9)
-        {
-            return Create(new BloomFilterRingOptions
-            {
-                FilterCount = filterCount,
-                ExpectedItems = expectedItems,
-                FalsePositiveRate = falsePositiveRate,
-                FillPercent = fillPercent,
-            });
-        }
-
-        /// <summary>
-        /// Creates a ring rotator from a set of parameters.
-        /// </summary>
-        public static BloomFilterRing Create(BloomFilterRingOptions options)
-        {
-            ArgumentNullException.ThrowIfNull(options);
-
-            if (options.FilterCount < 2)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(options),
-                    options.FilterCount,
-                    "The number of filters in the ring must be at least two.");
-            }
-
-            if (options.ExpectedItems <= 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(options),
-                    options.ExpectedItems,
-                    "The expected capacity of the filter must be greater than zero.");
-            }
-
-            if (options.FillPercent is <= 0 or > 1)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(options),
-                    options.FillPercent,
-                    "The fill percentage must be in the range (0, 1].");
-            }
-
-            if (options.FalsePositiveRate is <= 0 or >= 1)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(options),
-                    options.FalsePositiveRate,
-                    "The false positive rate must be in the range (0, 1).");
-            }
-
-            // The rotation threshold is calculated here, not passed from outside.
-            long rotationThreshold = Math.Max(1, (long)Math.Ceiling(options.ExpectedItems * options.FillPercent));
-
-            return new BloomFilterRing(
-                options.FilterCount,
-                options.ExpectedItems,
-                rotationThreshold,
-                options.FalsePositiveRate);
-        }
-    }
-
-    /// <summary>
     /// A lock-free ring rotator for Bloom filters for concurrent writes and reads.
     /// </summary>
     /// <remarks>
@@ -133,7 +27,7 @@ namespace BloomFilter
     /// threads, the unique counter may increase more than once (check and insert are not atomic).
     /// Like any Bloom filter, the count is approximate due to false positives.
     /// </remarks>
-    public sealed class BloomFilterRing
+    public sealed class BloomFilterRing : IBloomFilterRing
     {
         private readonly int _filterCount;
         private readonly long _rotationThreshold;
@@ -374,4 +268,3 @@ namespace BloomFilter
         }
     }
 }
-
