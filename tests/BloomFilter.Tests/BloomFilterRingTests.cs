@@ -13,7 +13,7 @@ public sealed class BloomFilterRingTests
         double fillPercent = 0.5,
         double falsePositiveRate = 1e-9)
     {
-        return BloomFilterRingFactory.Create(new BloomFilterRingOptions
+        return new BloomFilterRingFactory().CreateRing(new BloomFilterRingOptions
         {
             FilterCount = filterCount,
             ExpectedItems = expectedItems,
@@ -233,11 +233,11 @@ public sealed class BloomFilterRingTests
     [Fact]
     public void RingWithThresholdOfOneRotatesOnEveryInsert()
     {
-        BloomFilterRing ring = BloomFilterRingFactory.Create(
-            filterCount: 2,
-            expectedItems: 1,
-            falsePositiveRate: 0.01,
-            fillPercent: 0.001);
+        BloomFilterRing ring = new BloomFilterRingFactory().CreateRing(
+             filterCount: 2,
+             expectedItems: 1,
+             falsePositiveRate: 0.01,
+             fillPercent: 0.001);
 
         Assert.Equal(1L, ring.RotationThreshold);
 
@@ -268,3 +268,4 @@ public sealed class BloomFilterRingTests
         }
     }
 }
+

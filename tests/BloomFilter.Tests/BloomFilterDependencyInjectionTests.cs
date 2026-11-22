@@ -5,6 +5,19 @@ namespace BloomFilter.Tests;
 public sealed class BloomFilterDependencyInjectionTests
 {
     [Fact]
+    public void AddBloomFilterFactoriesRegistersBothFactoryInterfaces()
+    {
+        var services = new ServiceCollection()
+            .AddBloomFilterFactory()
+            .AddBloomFilterRingFactory();
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        Assert.IsType<BloomFilterFactory>(provider.GetRequiredService<IBloomFilterFactory>());
+        Assert.IsType<BloomFilterRingFactory>(provider.GetRequiredService<IBloomFilterRingFactory>());
+    }
+
+    [Fact]
     public void AddConcurrentBloomFilterRegistersTheConcreteFilterAndInterface()
     {
         var services = new ServiceCollection()

@@ -32,7 +32,7 @@ internal static class CapacityScenarios
         double filterRate = filterFalsePositives / (double)probes;
 
         // The same for the ring: fill with one item less than the threshold to avoid rotating.
-        BloomFilterRing ring = BloomFilterRingFactory.Create(3, items, TargetRate, fillPercent: 1.0);
+        BloomFilterRing ring = new BloomFilterRingFactory().CreateRing(3, items, TargetRate, fillPercent: 1.0);
         for (int i = 0; i < items - 1; i++)
         {
             int length = KeyWriter.Write(buffer, "ring-known-", i);
@@ -65,7 +65,7 @@ internal static class CapacityScenarios
         var report = new ScenarioReport($"Memory: ring for {Fmt.N(expected)} items in filter");
 
         long before = GC.GetTotalMemory(forceFullCollection: true);
-        BloomFilterRing ring = BloomFilterRingFactory.Create(3, expected, 0.001, fillPercent: 1.0);
+        BloomFilterRing ring = new BloomFilterRingFactory().CreateRing(3, expected, 0.001, fillPercent: 1.0);
         long after = GC.GetTotalMemory(forceFullCollection: true);
         long measured = after - before;
 
@@ -164,3 +164,4 @@ internal static class CapacityScenarios
         return falsePositives;
     }
 }
+

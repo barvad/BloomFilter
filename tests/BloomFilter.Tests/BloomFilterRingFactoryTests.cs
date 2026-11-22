@@ -16,7 +16,7 @@ public sealed class BloomFilterRingFactoryTests
     [Fact]
     public void CreateRejectsNullOptions()
     {
-        Assert.Throws<ArgumentNullException>(() => BloomFilterRingFactory.Create(null!));
+        Assert.Throws<ArgumentNullException>(() => new BloomFilterRingFactory().CreateRing(null!));
     }
 
     [Theory]
@@ -26,7 +26,7 @@ public sealed class BloomFilterRingFactoryTests
     public void CreateRejectsRingWithLessThanTwoFilters(int filterCount)
     {
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => BloomFilterRingFactory.Create(filterCount, expectedItems: 100));
+            () => new BloomFilterRingFactory().CreateRing(filterCount, expectedItems: 100));
     }
 
     [Theory]
@@ -36,7 +36,7 @@ public sealed class BloomFilterRingFactoryTests
     public void CreateRejectsNonPositiveExpectedItems(long expectedItems)
     {
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => BloomFilterRingFactory.Create(filterCount: 3, expectedItems));
+            () => new BloomFilterRingFactory().CreateRing(filterCount: 3, expectedItems));
     }
 
     [Theory]
@@ -47,7 +47,7 @@ public sealed class BloomFilterRingFactoryTests
     public void CreateRejectsFillPercentOutsideUnitInterval(double fillPercent)
     {
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => BloomFilterRingFactory.Create(3, 100, fillPercent: fillPercent));
+            () => new BloomFilterRingFactory().CreateRing(3, 100, fillPercent: fillPercent));
     }
 
     [Theory]
@@ -58,13 +58,13 @@ public sealed class BloomFilterRingFactoryTests
     public void CreateRejectsFalsePositiveRateOutsideOpenUnitInterval(double falsePositiveRate)
     {
         Assert.Throws<ArgumentOutOfRangeException>(
-            () => BloomFilterRingFactory.Create(3, 100, falsePositiveRate));
+            () => new BloomFilterRingFactory().CreateRing(3, 100, falsePositiveRate));
     }
 
     [Fact]
     public void CreateAcceptsBoundaryValues()
     {
-        BloomFilterRing ring = BloomFilterRingFactory.Create(2, 100, 0.5, fillPercent: 1.0);
+        BloomFilterRing ring = new BloomFilterRingFactory().CreateRing(2, 100, 0.5, fillPercent: 1.0);
 
         Assert.Equal(2, ring.FilterCount);
         Assert.Equal(100L, ring.RotationThreshold);
@@ -81,8 +81,8 @@ public sealed class BloomFilterRingFactoryTests
             FalsePositiveRate = 0.001,
         };
 
-        BloomFilterRing fromOptions = BloomFilterRingFactory.Create(options);
-        BloomFilterRing fromArguments = BloomFilterRingFactory.Create(4, 2_000, 0.001, 0.75);
+        BloomFilterRing fromOptions = new BloomFilterRingFactory().CreateRing(options);
+        BloomFilterRing fromArguments = new BloomFilterRingFactory().CreateRing(4, 2_000, 0.001, 0.75);
 
         Assert.Equal(fromArguments.FilterCount, fromOptions.FilterCount);
         Assert.Equal(fromArguments.RotationThreshold, fromOptions.RotationThreshold);
@@ -99,8 +99,9 @@ public sealed class BloomFilterRingFactoryTests
         double fillPercent,
         long expectedThreshold)
     {
-        BloomFilterRing ring = BloomFilterRingFactory.Create(3, expectedItems, fillPercent: fillPercent);
+        BloomFilterRing ring = new BloomFilterRingFactory().CreateRing(3, expectedItems, fillPercent: fillPercent);
 
         Assert.Equal(expectedThreshold, ring.RotationThreshold);
     }
 }
+

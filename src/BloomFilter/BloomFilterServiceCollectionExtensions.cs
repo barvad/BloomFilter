@@ -7,6 +7,26 @@ namespace BloomFilter;
 /// </summary>
 public static class BloomFilterServiceCollectionExtensions
 {
+    /// <summary>Registers the standalone Bloom filter factory.</summary>
+    public static IServiceCollection AddBloomFilterFactory(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddSingleton<BloomFilterFactory>();
+        services.AddSingleton<IBloomFilterFactory>(provider => provider.GetRequiredService<BloomFilterFactory>());
+        return services;
+    }
+
+    /// <summary>Registers the rotating Bloom filter ring factory.</summary>
+    public static IServiceCollection AddBloomFilterRingFactory(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddSingleton<BloomFilterRingFactory>();
+        services.AddSingleton<IBloomFilterRingFactory>(provider => provider.GetRequiredService<BloomFilterRingFactory>());
+        return services;
+    }
+
     /// <summary>
     /// Registers a singleton <see cref="ConcurrentBloomFilter"/> and exposes it as <see cref="IBloomFilter"/>.
     /// </summary>
@@ -37,14 +57,12 @@ public static class BloomFilterServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(options);
 
-        services.AddSingleton(_ => BloomFilterRingFactory.Create(options));
+        services.AddSingleton(_ => new BloomFilterRingFactory().CreateRing(options));
         services.AddSingleton<IBloomFilterRing>(provider => provider.GetRequiredService<BloomFilterRing>());
         return services;
     }
 
-    /// <summary>
-    /// Registers a singleton rotating Bloom filter ring using default options.
-    /// </summary>
+    /// <summary>Registers a singleton rotating Bloom filter ring using default options.</summary>
     /// <param name="services">The service collection.</param>
     public static IServiceCollection AddBloomFilterRing(this IServiceCollection services)
     {

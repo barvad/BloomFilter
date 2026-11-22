@@ -30,15 +30,29 @@ For data with a limited time window, use `BloomFilterRing`, which automatically 
 
 ## Interfaces and dependency injection
 
-`ConcurrentBloomFilter` implements `IBloomFilter`, and `BloomFilterRing` implements `IBloomFilterRing`. Existing concrete classes and factory methods remain available, so this is a backward-compatible minor release.
+`ConcurrentBloomFilter` implements `IBloomFilter`, and `BloomFilterRing` implements `IBloomFilterRing`. The injectable `BloomFilterFactory` implements `IBloomFilterFactory`, while `BloomFilterRingFactory` implements `IBloomFilterRingFactory`.
 
-Install the package and register a singleton filter or ring:
+New code can create filters and rings through interfaces:
+
+```csharp
+IBloomFilterFactory filterFactory = new BloomFilterFactory();
+IBloomFilterRingFactory ringFactory = new BloomFilterRingFactory();
+
+IBloomFilter filter = filterFactory.CreateFilter(expectedItems: 1_000_000);
+IBloomFilterRing ring = ringFactory.CreateRing(filterCount: 3, expectedItems: 1_000_000);
+```
+
+The old static `BloomFilterRingFactory.Create(...)` methods remain available and are marked obsolete. Use instance `CreateRing(...)` methods instead.
+
+Install the package and register the filters and factories:
 
 ```csharp
 using BloomFilter;
 using Microsoft.Extensions.DependencyInjection;
 
 var services = new ServiceCollection()
+    .AddBloomFilterFactory()
+    .AddBloomFilterRingFactory()
     .AddConcurrentBloomFilter(expectedItems: 1_000_000)
     .AddBloomFilterRing(new BloomFilterRingOptions
     {
@@ -49,13 +63,13 @@ var services = new ServiceCollection()
     });
 ```
 
-The extension methods register both the concrete type and its interface. The package uses `Microsoft.Extensions.DependencyInjection.Abstractions` and does not require a specific application host.
+The extension methods register singleton factories and filters, exposing both concrete types and their interfaces. The package uses `Microsoft.Extensions.DependencyInjection.Abstractions` and does not require a specific application host.
 
 Detailed load test scenarios are described in [tests/BloomFilter.LoadTests/README.md](tests/BloomFilter.LoadTests/README.md).
 
 ## NuGet package
 
-The package is named `barvad.RotatingBloomFilter`. Version `1.1.0` adds the public interfaces and dependency injection extensions without removing or changing existing public APIs.
+The package is named `barvad.RotatingBloomFilter`. Version `1.2.0` adds injectable `IBloomFilterFactory` and `IBloomFilterRingFactory` abstractions. Existing static `BloomFilterRingFactory.Create(...)` methods remain available as obsolete compatibility shims.
 
 ## Publishing to NuGet.org
 

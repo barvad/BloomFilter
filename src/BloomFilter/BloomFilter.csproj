@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
 
     <PackageId>barvad.RotatingBloomFilter</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>barvad</Authors>
     <Company>barvad</Company>
     <Description>Thread-safe Bloom filters for .NET, including a lock-free rotating Bloom filter ring for bounded time windows.</Description>

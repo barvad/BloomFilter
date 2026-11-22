@@ -13,7 +13,7 @@ internal static class ReadScenarios
     {
         long total = settings.ReadItems;
         int threads = settings.Threads;
-        BloomFilterRing ring = BloomFilterRingFactory.Create(3, total + 1, 0.001, fillPercent: 1.0);
+        BloomFilterRing ring = new BloomFilterRingFactory().CreateRing(3, total + 1, 0.001, fillPercent: 1.0);
         var report = new ScenarioReport($"Parallel reading: {Fmt.N(total)} keys, {threads} threads");
 
         long perThread = total / threads;
@@ -117,7 +117,7 @@ internal static class ReadScenarios
         const int sampleSize = 64;
         const int sampleSlots = 5;
 
-        BloomFilterRing ring = BloomFilterRingFactory.Create(
+        BloomFilterRing ring = new BloomFilterRingFactory().CreateRing(
             filterCount,
             expectedItems,
             falsePositiveRate,
@@ -275,3 +275,4 @@ internal static class ReadScenarios
         return present;
     }
 }
+

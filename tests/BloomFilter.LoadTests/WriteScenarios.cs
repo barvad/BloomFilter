@@ -20,7 +20,7 @@ internal static class WriteScenarios
         WarmUp(buffer, 10_000);
 
         var filter = new ConcurrentBloomFilter(items, 0.001);
-        BloomFilterRing ring = BloomFilterRingFactory.Create(3, items + 1, 0.001, fillPercent: 1.0);
+        BloomFilterRing ring = new BloomFilterRingFactory().CreateRing(3, items + 1, 0.001, fillPercent: 1.0);
 
         var filterLatency = new LatencySamples();
         long allocBefore = GC.GetAllocatedBytesForCurrentThread();
@@ -110,7 +110,7 @@ internal static class WriteScenarios
         int threads = settings.Threads;
 
         // The threshold is one greater than the total number of writes, so the ring does not rotate.
-        BloomFilterRing ring = BloomFilterRingFactory.Create(3, total + 1, 0.001, fillPercent: 1.0);
+        BloomFilterRing ring = new BloomFilterRingFactory().CreateRing(3, total + 1, 0.001, fillPercent: 1.0);
         var report = new ScenarioReport(
             $"Parallel writing without rotation: {Fmt.N(total)} values, {threads} threads");
 
@@ -201,7 +201,7 @@ internal static class WriteScenarios
     {
         // One-time instances: only JIT and code-path warm-up matter.
         var filter = new ConcurrentBloomFilter(count * 2, 0.001);
-        BloomFilterRing ring = BloomFilterRingFactory.Create(3, count * 2, 0.001, fillPercent: 1.0);
+        BloomFilterRing ring = new BloomFilterRingFactory().CreateRing(3, count * 2, 0.001, fillPercent: 1.0);
 
         for (int i = 0; i < count; i++)
         {
