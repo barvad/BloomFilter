@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
 
     <PackageId>barvad.RotatingBloomFilter</PackageId>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <Authors>barvad</Authors>
     <Company>barvad</Company>
     <Description>Thread-safe Bloom filters for .NET, including a lock-free rotating Bloom filter ring for bounded time windows.</Description>
@@ -17,6 +17,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -29,6 +30,7 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="README.md" Link="README.md" />
+    <None Include="..\..\assets\icon.png" Pack="true" PackagePath="icon.png" Link="icon.png" />
   </ItemGroup>
 
 </Project>

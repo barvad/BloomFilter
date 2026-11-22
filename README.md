@@ -69,7 +69,7 @@ Detailed load test scenarios are described in [tests/BloomFilter.LoadTests/READM
 
 ## NuGet package
 
-The package is named `barvad.RotatingBloomFilter`. Version `1.2.0` adds injectable `IBloomFilterFactory` and `IBloomFilterRingFactory` abstractions. Existing static `BloomFilterRingFactory.Create(...)` methods remain available as obsolete compatibility shims.
+The package is named `barvad.RotatingBloomFilter`. Version `1.2.1` adds the NuGet package icon from `assets/icon.png`. Existing static `BloomFilterRingFactory.Create(...)` methods remain available as obsolete compatibility shims.
 
 ## Publishing to NuGet.org
 
